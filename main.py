@@ -15,13 +15,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Registre o blueprint (se estiver usando)
 app.register_blueprint(routes)
 
-# Rota principal que serve o index.html
 @app.route('/')
 def index():
-    # Renderiza o arquivo index.html da pasta 'templates'
     return render_template('index.html')
 
-# Rota para receber e processar o arquivo CSV
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -40,18 +37,26 @@ def upload_file():
         file.save(file_path)
         flash('Arquivo enviado com sucesso')
 
-        # Processar o CSV
+        # Processa o CSV e obtém o caminho do arquivo processado
         processed_file_path = process_csv(file_path)
+        
+        # Se o processamento foi bem-sucedido, gera o link de download
         if processed_file_path:
-            flash('Arquivo CSV processado com sucesso')
+            processed_file_url = url_for('download_file', filename=os.path.basename(processed_file_path))
+            return render_template('index.html', processed_file_url=processed_file_url)
         else:
             flash('Erro ao processar o arquivo CSV')
-
-        return redirect(url_for('index'))
+            return redirect(url_for('index'))
 
     else:
         flash('Arquivo inválido. Somente arquivos CSV são permitidos.')
         return redirect(request.url)
+
+# Rota para fazer o download do arquivo processado
+@app.route('/uploads/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
